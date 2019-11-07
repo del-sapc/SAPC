@@ -1,1 +1,40 @@
- Need to add sequence of operation and details on each interface
+These workflows are independent of each other:
+ 
+1. wf_dicl_check_stage_buffers: 
+- Create the placeholder in staging table so that the sequences generated thorugh staging framework don't intersect the the one's created by Custom Loader.
+
+2. wf_dicl_failure_notice:
+- In DICL_AUDIT, creates an entry for failure
+- In DICL_AUDIT_DETAILS, details of the failure captured
+
+3. wf_dicl_purge:
+- Invokes API to SAPC to run the purge pipeline
+- Purges all the data loaded to staging, mirror and custom loader based on the number of days specified.
+- Unix script associated:
+
+4. wf_dicl_vt_update:
+- DICL_AUDIT: Update the status of VT progress to VT complete.
+- DICL_AUDIT_DETAILS: Add any VT errors that occured during import for the batchname in details table
+- This process will run scheduled every 5 mins in background and check if any V&T that has been logged into DICL_AUDIT 
+  table is complete or not in the SAPC UI. If complete , the process will mark the corresponding record in DICL_AUDIT table 
+  as “V&T-Complete”.
+
+       
+Pre-Requisite:     
+• HPEC_DICL_AUDIT	- Main Audit Table which tracks the status of the File processing
+• HPEC_DICL_AUDIT_DETAILS - Error details of data in the file being processed.
+• HPEC_DICL_CODE_TABLE - Code to value mapping required for Audit record entries.
+• HPEC_DICL_AUDIT_SEQ - Sequence to populate the HPEC_DICL_AUDIT table
+• HPEC_DICL_VT_CONTROL - Configurable table to control the Validate and Transfer options, during Import, for every Inbound process 
+  (AUDIT tables need to be created in AppZone, not Landing Pad as the table size will keep on growing)
+• DICL_CODE_TABLE: Gets the CODEVALUE of the process as below:
+      CODEVALUE		DESCRIPTION
+       1		    File Received
+       2		    File Staging - In Progress
+       3		    File Staging - Complete
+       4		    Validate and Transfer - In Progress
+       5		    Validate and Transfer - Complete
+       6		    File Creation - In Progress
+       7		    File Creation - Complete
+       9		    Process Failure
+
